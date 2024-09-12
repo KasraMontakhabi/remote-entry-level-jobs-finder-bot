@@ -4,7 +4,7 @@ import time
 import logging
 from telegram import Bot
 from .database import filter_new_jobs, store_job_history, cursor
-from .scrapper import scrape_linkedin_jobs, get_jobs_from_jobs_api
+from .scraper import scrape_linkedin_jobs, get_jobs_from_jobs_api
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ def job_notifications(token):
 
 # Set up scheduled job alerts (daily alerts at 9 AM)
 def schedule_daily_alerts():
+    logger.info("Scheduling daily job alerts at 9:00 AM")
     schedule.every().day.at("09:00").do(job_notifications)
     while True:
         schedule.run_pending()

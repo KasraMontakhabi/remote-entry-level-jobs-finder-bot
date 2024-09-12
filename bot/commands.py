@@ -1,32 +1,31 @@
 # bot/commands.py
 import logging
-from telegram import Update
-from telegram.ext import CommandHandler
-from .database import get_user_filters, save_user_filters, filter_new_jobs, store_job_history
-from .scrapper import scrape_linkedin_jobs, get_jobs_from_jobs_api
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import MessageHandler, filters
+from .database import save_user_filters, get_user_filters, filter_new_jobs, store_job_history
+from .scraper import scrape_linkedin_jobs, get_jobs_from_jobs_api
 
-# Setup logging
 logger = logging.getLogger(__name__)
+
+
+# Handle incoming text messages and treat them as job filters
+async def set_filter_from_message(update: Update, context) -> None:
+    """Stores the user's message as a job filter."""
+    chat_id = update.message.chat_id
+    filters = update.message.text.strip()
+
+    # Store the user's input as the job filter
+    logger.info(f"User {chat_id} set filters: {filters}")
+    save_user_filters(chat_id, filters)
+    await update.message.reply_text(f"Job filter has been set to: {filters}")
 
 
 # Command: /start
 async def start(update: Update, context) -> None:
     """Send a welcome message when the command /start is issued."""
-    logger.info(f"User {update.message.chat_id} sent /start")
     await update.message.reply_text(
-        'Welcome to the Remote Entry-Level Job Finder Bot!\nUse /set_filters to configure your job title.'
+        'Welcome to the Remote Entry-Level Job Finder Bot!\nPlease type the job title you are looking for (e.g., "Backend Developer").'
     )
-
-
-# Command: /set_filters (Allow users to set job title)
-async def set_filters(update: Update, context) -> None:
-    """Sets the job title filters."""
-    chat_id = update.message.chat_id
-    filters = ' '.join(context.args)
-
-    logger.info(f"User {chat_id} set filters: {filters}")
-    save_user_filters(chat_id, filters)
-    await update.message.reply_text(f'Job title filters have been set to: {filters}')
 
 
 # Command: /search (Scrape job listings and send them to the user)
@@ -38,7 +37,7 @@ async def search_jobs(update: Update, context) -> None:
     filters = get_user_filters(chat_id)
     if not filters:
         logger.info(f"User {chat_id} has no filters set")
-        await update.message.reply_text('Please set your job title using /set_filters before searching for jobs.')
+        await update.message.reply_text('Please type the job title you are looking for before searching for jobs.')
         return
 
     # Scrape jobs from multiple sites
@@ -56,3 +55,34 @@ async def search_jobs(update: Update, context) -> None:
     else:
         logger.info(f"No new jobs found for user {chat_id}")
         await update.message.reply_text('No new remote entry-level jobs found based on your filters.')
+
+
+# Function to display an inline menu
+async def show_menu(update: Update, context) -> None:
+    """Show an interactive menu with options."""
+    keyboard = [
+        [InlineKeyboardButton("Search Jobs", callback_data='search_jobs')],
+        [InlineKeyboardButton("Help", callback_data='help')]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Choose an option:', reply_markup=reply_markup)
+
+
+# Handle button clicks from the inline menu
+async def button_handler(update: Update, context) -> None:
+    """Handle button click events from the inline menu."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == 'search_jobs':
+        await query.edit_message_text(text="Searching for jobs... Use /search command.")
+    elif query.data == 'help':
+        help_text = """
+        Welcome to the Remote Job Finder Bot! Here's how you can use me:
+
+        1. Type the job title you're looking for.
+        2. Use /search to search for remote jobs based on your filter.
+        3. You will receive daily job notifications at 9 AM based on your filter.
+        """
+        await query.edit_message_text(text=help_text)

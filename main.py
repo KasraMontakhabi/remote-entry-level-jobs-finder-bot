@@ -2,10 +2,10 @@
 import os
 import logging
 from dotenv import load_dotenv
-from bot.commands import start, set_filters, search_jobs
+from bot.commands import start, search_jobs, set_filter_from_message, show_menu, button_handler
 from bot.database import create_tables
 from bot.scheduler import schedule_daily_alerts
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -26,10 +26,14 @@ def main() -> None:
     # Create the Application instance and pass it your bot token
     application = Application.builder().token(TOKEN).build()
 
-    # Add handlers
+    # Add command handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("set_filters", set_filters))
     application.add_handler(CommandHandler("search", search_jobs))
+    application.add_handler(CommandHandler("menu", show_menu))  # Menu command
+    application.add_handler(CallbackQueryHandler(button_handler))  # Handle button clicks
+
+    # Add a handler to detect plain text messages and treat them as job filters
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, set_filter_from_message))
 
     # Start polling for messages
     logger.info("Bot is now polling for messages")
