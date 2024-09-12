@@ -9,6 +9,8 @@ from .scraper import scrape_linkedin_jobs, get_jobs_from_jobs_api
 # Setup logging
 logger = logging.getLogger(__name__)
 
+notification_time = "09:00"
+
 
 # Schedule job notifications based on user preferences
 def job_notifications(token):
@@ -42,3 +44,15 @@ def schedule_daily_alerts():
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+
+def adjust_schedule_time(new_time):
+    global notification_time
+    notification_time = new_time
+    logger.info(f"Adjusting job notifications time to {notification_time}")
+
+    # Clear any existing scheduled jobs
+    schedule.clear('job_notifications')
+
+    # Reschedule daily alerts at the new time
+    schedule.every().day.at(notification_time).do(job_notifications).tag('job_notifications')

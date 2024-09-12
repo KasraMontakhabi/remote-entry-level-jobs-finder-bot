@@ -41,6 +41,14 @@ def get_user_filters(chat_id):
     return row[0] if row else None
 
 
+# Get all users and their filters
+def get_user_filters_all():
+    """Fetch all users with their filters from the database."""
+    logger.info("Fetching all users and their filters")
+    cursor.execute("SELECT chat_id, filters FROM user_filters")
+    return cursor.fetchall()
+
+
 # Filter out jobs already sent to the user
 def filter_new_jobs(chat_id, jobs):
     logger.info(f"Filtering out previously sent jobs for user {chat_id}")

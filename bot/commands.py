@@ -2,8 +2,11 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import MessageHandler, filters
+import schedule
+from datetime import datetime
 from .database import save_user_filters, get_user_filters, filter_new_jobs, store_job_history
 from .scraper import scrape_linkedin_jobs, get_jobs_from_jobs_api
+from .scheduler import adjust_schedule_time
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +26,89 @@ async def set_filter_from_message(update: Update, context) -> None:
 # Command: /start
 async def start(update: Update, context) -> None:
     """Send a welcome message when the command /start is issued."""
-    await update.message.reply_text(
-        'Welcome to the Remote Entry-Level Job Finder Bot!\nPlease type the job title you are looking for (e.g., "Backend Developer").'
-    )
+    start_text = """
+    Welcome to the Remote Entry-Level Job Finder Bot!
+
+    How to use:
+    1. Type the job title you are looking for (e.g., "Backend Developer").
+    2. Use /search to search for remote jobs based on your filter.
+
+    Other commands:
+    - /menu: Access an interactive menu for job searching options.
+    - /help: See detailed instructions on how to use the bot.
+    - /set_time <HH:MM>: Set the daily notification time (24-hour format, e.g., 08:00).
+
+    You will receive daily job notifications at the set time based on your filter.
+    """
+    await update.message.reply_text(start_text)
+
+
+# Command: /help
+async def help_command(update: Update, context) -> None:
+    """Send a help message when the command /help is issued."""
+    help_text = """
+    Remote Entry-Level Job Finder Bot - Help Guide
+
+    How to use:
+    1. Type the job title you are looking for (e.g., "Backend Developer").
+    2. Use /search to search for remote jobs based on your filter.
+
+    Commands:
+    - /menu: Access an interactive menu for job searching options.
+    - /help: See detailed instructions on how to use the bot.
+    - /set_time <HH:MM>: Set the daily notification time (24-hour format, e.g., 08:00).
+
+    You will receive daily job notifications at the set time based on your filter.
+    """
+    await update.message.reply_text(help_text)
+
+
+# Command: /set_time (Set the notification time)
+async def set_time(update: Update, context) -> None:
+    """Set the time for daily notifications."""
+    chat_id = update.message.chat_id
+    if len(context.args) != 1:
+        await update.message.reply_text("Please use the format: /set_time <HH:MM> (e.g., /set_time 09:00).")
+        return
+
+    time_str = context.args[0]
+
+    try:
+        # Validate and parse the time
+        datetime.strptime(time_str, "%H:%M")
+        adjust_schedule_time(time_str)
+        await update.message.reply_text(
+            f"Notification time has been set to {time_str}. You will receive daily notifications at this time.")
+        logger.info(f"User {chat_id} set notification time to {time_str}")
+    except ValueError:
+        await update.message.reply_text("Invalid time format. Please use HH:MM (e.g., 09:00).")
+
+
+# Function to display an inline menu
+async def show_menu(update: Update, context) -> None:
+    """Show an interactive menu with options."""
+    keyboard = [
+        [InlineKeyboardButton("Search Jobs", callback_data='search_jobs')],
+        [InlineKeyboardButton("Help", callback_data='help')],
+        [InlineKeyboardButton("Set Notification Time", callback_data='set_time')]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Choose an option:', reply_markup=reply_markup)
+
+
+# Handle button clicks from the inline menu
+async def button_handler(update: Update, context) -> None:
+    """Handle button click events from the inline menu."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == 'search_jobs':
+        await query.edit_message_text(text="Searching for jobs... Use /search command.")
+    elif query.data == 'help':
+        await help_command(update, context)
+    elif query.data == 'set_time':
+        await query.edit_message_text(text="To set the notification time, use the /set_time <HH:MM> command.")
 
 
 # Command: /search (Scrape job listings and send them to the user)
@@ -55,34 +138,3 @@ async def search_jobs(update: Update, context) -> None:
     else:
         logger.info(f"No new jobs found for user {chat_id}")
         await update.message.reply_text('No new remote entry-level jobs found based on your filters.')
-
-
-# Function to display an inline menu
-async def show_menu(update: Update, context) -> None:
-    """Show an interactive menu with options."""
-    keyboard = [
-        [InlineKeyboardButton("Search Jobs", callback_data='search_jobs')],
-        [InlineKeyboardButton("Help", callback_data='help')]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('Choose an option:', reply_markup=reply_markup)
-
-
-# Handle button clicks from the inline menu
-async def button_handler(update: Update, context) -> None:
-    """Handle button click events from the inline menu."""
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == 'search_jobs':
-        await query.edit_message_text(text="Searching for jobs... Use /search command.")
-    elif query.data == 'help':
-        help_text = """
-        Welcome to the Remote Job Finder Bot! Here's how you can use me:
-
-        1. Type the job title you're looking for.
-        2. Use /search to search for remote jobs based on your filter.
-        3. You will receive daily job notifications at 9 AM based on your filter.
-        """
-        await query.edit_message_text(text=help_text)
