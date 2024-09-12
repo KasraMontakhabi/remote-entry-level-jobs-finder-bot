@@ -1,9 +1,14 @@
 # bot/scraper.py
 import logging
+import os
+
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+load_dotenv()
 
 
 # Scrape jobs from LinkedIn (remote, entry-level, worldwide)
@@ -29,7 +34,7 @@ def get_jobs_from_jobs_api(filters):
     query = filters.replace(' ', '%')
     url = f"https://jobs-api14.p.rapidapi.com/list"
     headers = {
-        "x-rapidapi-key": "your-rapidapi-key-here",  # Load from environment variable
+        "x-rapidapi-key": os.environ.get("RAPID_API_KEY"),  # Load from environment variable
         "x-rapidapi-host": "jobs-api14.p.rapidapi.com",
         "Content-Type": "application/json"
     }
