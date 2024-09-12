@@ -1,5 +1,9 @@
 # bot/database.py
 import sqlite3
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # SQLite database connection
 conn = sqlite3.connect('job_finder_bot.db', check_same_thread=False)
@@ -8,6 +12,7 @@ cursor = conn.cursor()
 
 # Create tables to store user preferences and job history
 def create_tables():
+    logger.info("Creating database tables if they do not exist")
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_filters (
                         chat_id INTEGER PRIMARY KEY, 
                         filters TEXT)''')
@@ -23,12 +28,14 @@ def create_tables():
 
 # Save user filters in the database
 def save_user_filters(chat_id, filters):
+    logger.info(f"Saving filters for user {chat_id}: {filters}")
     cursor.execute("INSERT OR REPLACE INTO user_filters (chat_id, filters) VALUES (?, ?)", (chat_id, filters))
     conn.commit()
 
 
 # Get user filters from the database
 def get_user_filters(chat_id):
+    logger.info(f"Fetching filters for user {chat_id}")
     cursor.execute("SELECT filters FROM user_filters WHERE chat_id = ?", (chat_id,))
     row = cursor.fetchone()
     return row[0] if row else None
@@ -36,6 +43,7 @@ def get_user_filters(chat_id):
 
 # Filter out jobs already sent to the user
 def filter_new_jobs(chat_id, jobs):
+    logger.info(f"Filtering out previously sent jobs for user {chat_id}")
     new_jobs = []
     for job in jobs:
         cursor.execute("SELECT 1 FROM job_history WHERE chat_id = ? AND job_title = ? AND company = ?",
@@ -47,6 +55,7 @@ def filter_new_jobs(chat_id, jobs):
 
 # Store job postings in the job history table
 def store_job_history(chat_id, jobs):
+    logger.info(f"Storing {len(jobs)} jobs in job history for user {chat_id}")
     for job in jobs:
         cursor.execute("INSERT OR IGNORE INTO job_history (chat_id, job_title, company, job_link) VALUES (?, ?, ?, ?)",
                        (chat_id, job['title'], job['company'], job['link']))
