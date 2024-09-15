@@ -2,7 +2,8 @@
 import os
 import logging
 from dotenv import load_dotenv
-from bot.commands import start, search_jobs, set_filter_from_message, show_menu, button_handler, set_time
+from bot.commands import start, search_jobs, set_filter_from_message, show_menu, button_handler, set_time, \
+    clear_filters, remove_timer
 from bot.database import create_tables
 from bot.scheduler import schedule_daily_alerts
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
@@ -30,6 +31,8 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("search", search_jobs))
     application.add_handler(CommandHandler("set_time", set_time))
+    application.add_handler(CommandHandler("clear_filters", clear_filters))
+    application.add_handler(CommandHandler("remove_timer", remove_timer))
     application.add_handler(CommandHandler("menu", show_menu))  # Menu command
     application.add_handler(CallbackQueryHandler(button_handler))  # Handle button clicks
 

@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import MessageHandler, filters
 import schedule
 from datetime import datetime
-from .database import save_user_filters, get_user_filters, filter_new_jobs, store_job_history
+from .database import save_user_filters, get_user_filters, filter_new_jobs, store_job_history, clear_user_filters
 from .scraper import scrape_linkedin_jobs, get_jobs_from_jobs_api
 from .scheduler import adjust_schedule_time
 
@@ -70,7 +70,9 @@ async def show_menu(update: Update, context) -> None:
     """Show an interactive menu with options."""
     keyboard = [
         [InlineKeyboardButton("Search Jobs", callback_data='search_jobs')],
-        [InlineKeyboardButton("Set Notification Time", callback_data='set_time')]
+        [InlineKeyboardButton("Set Notification Time", callback_data='set_time')],
+        [InlineKeyboardButton("Clear Filters", callback_data='clear_filters')],
+        [InlineKeyboardButton("Remove Notification Timer", callback_data='remove_timer')]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -84,12 +86,16 @@ async def button_handler(update: Update, context) -> None:
     await query.answer()
 
     if query.data == 'search_jobs':
-        await query.edit_message_text(text="Searching for jobs... Use /search command.")
+        await query.edit_message_text(text="Searching for jobs... Type a job title and then use /search command.")
     elif query.data == 'set_time':
         await query.edit_message_text(text="To set the notification time, use the /set_time <HH:MM> command.")
+    elif query.data == 'clear_filters':
+        await clear_filters(update, context)  # Call the clear filters command
+    elif query.data == 'remove_timer':
+        await remove_timer(update, context)
 
 
-# Command: /search (Scrape job listings and send them to the user)
+    # Command: /search (Scrape job listings and send them to the user)
 async def search_jobs(update: Update, context) -> None:
     """Scrapes job listings based on the job title filter."""
     chat_id = update.message.chat_id
@@ -116,3 +122,25 @@ async def search_jobs(update: Update, context) -> None:
     else:
         logger.info(f"No new jobs found for user {chat_id}")
         await update.message.reply_text('No new remote entry-level jobs found based on your filters.')
+
+
+async def clear_filters(update: Update, context) -> None:
+    """Clears all job filters for the user."""
+    chat_id = update.callback_query.message.chat_id  # Access chat_id from callback_query
+    clear_user_filters(chat_id)  # Use the database method to clear filters
+
+    await update.callback_query.edit_message_text(
+        "All filters have been cleared. You can set new filters by typing a job title.")
+    logger.info(f"User {chat_id} cleared all filters.")
+
+
+# Command: /remove_timer (Stop daily notifications for the user)
+async def remove_timer(update: Update, context) -> None:
+    """Removes the daily notification timer for the user."""
+    chat_id = update.callback_query.message.chat_id  # Access chat_id from callback_query
+
+    # Remove the timer for this user (if applicable)
+    schedule.clear('job_notifications')  # Clears all scheduled notifications
+
+    await update.callback_query.edit_message_text("Your daily job notifications have been removed. Use /set_time to set it again.")
+    logger.info(f"User {chat_id} removed the notification timer.")

@@ -68,3 +68,11 @@ def store_job_history(chat_id, jobs):
         cursor.execute("INSERT OR IGNORE INTO job_history (chat_id, job_title, company, job_link) VALUES (?, ?, ?, ?)",
                        (chat_id, job['title'], job['company'], job['link']))
     conn.commit()
+
+
+# Clear user filters
+def clear_user_filters(chat_id):
+    """Clears all filters for the user."""
+    logger.info(f"Clearing all filters for user {chat_id}")
+    cursor.execute("DELETE FROM user_filters WHERE chat_id = ?", (chat_id,))
+    conn.commit()
