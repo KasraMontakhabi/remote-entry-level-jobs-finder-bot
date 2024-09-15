@@ -57,13 +57,7 @@ The **Remote Entry-Level Job Finder Bot** is a Telegram bot that helps users fin
     RAPIDAPI_KEY=your-rapidapi-key (optional)
     ```
 
-4. Initialize the database:
-
-    ```bash
-    python3 main.py
-    ```
-
-5. Run the bot:
+4. Initialize the database and run the bot:
 
     ```bash
     python3 main.py
