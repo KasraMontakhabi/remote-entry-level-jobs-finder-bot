@@ -55,4 +55,8 @@ def adjust_schedule_time(new_time):
     schedule.clear('job_notifications')
 
     # Reschedule daily alerts at the new time
-    schedule.every().day.at(notification_time).do(job_notifications).tag('job_notifications')
+    try:
+        schedule.every().day.at(notification_time).do(job_notifications).tag('job_notifications')
+        logger.info(f"Rescheduled daily job notifications at {notification_time}")
+    except Exception as e:
+        logger.error(f"Failed to reschedule job notifications at {notification_time}. Error: {e}")
