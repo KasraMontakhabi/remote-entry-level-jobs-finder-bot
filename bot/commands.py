@@ -126,21 +126,29 @@ async def search_jobs(update: Update, context) -> None:
 
 async def clear_filters(update: Update, context) -> None:
     """Clears all job filters for the user."""
-    chat_id = update.callback_query.message.chat_id  # Access chat_id from callback_query
-    clear_user_filters(chat_id)  # Use the database method to clear filters
+    if update.callback_query:
+        chat_id = update.callback_query.message.chat_id  # Triggered by inline button
+        await update.callback_query.edit_message_text(
+            "All filters have been cleared. You can set new filters by typing a job title.")
+    else:
+        chat_id = update.message.chat_id  # Triggered by direct command
+        await update.message.reply_text("All filters have been cleared. You can set new filters by typing a job title.")
 
-    await update.callback_query.edit_message_text(
-        "All filters have been cleared. You can set new filters by typing a job title.")
+    clear_user_filters(chat_id)  # Use the database method to clear filters
     logger.info(f"User {chat_id} cleared all filters.")
 
 
 # Command: /remove_timer (Stop daily notifications for the user)
 async def remove_timer(update: Update, context) -> None:
     """Removes the daily notification timer for the user."""
-    chat_id = update.callback_query.message.chat_id  # Access chat_id from callback_query
+    if update.callback_query:
+        chat_id = update.callback_query.message.chat_id  # Triggered by inline button
+        await update.callback_query.edit_message_text(
+            "Your daily job notifications have been removed. Use /set_time to set it again.")
+    else:
+        chat_id = update.message.chat_id  # Triggered by direct command
+        await update.message.reply_text(
+            "Your daily job notifications have been removed. Use /set_time to set it again.")
 
-    # Remove the timer for this user (if applicable)
     schedule.clear('job_notifications')  # Clears all scheduled notifications
-
-    await update.callback_query.edit_message_text("Your daily job notifications have been removed. Use /set_time to set it again.")
     logger.info(f"User {chat_id} removed the notification timer.")
