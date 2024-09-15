@@ -20,7 +20,7 @@ async def set_filter_from_message(update: Update, context) -> None:
     # Store the user's input as the job filter
     logger.info(f"User {chat_id} set filters: {filters}")
     save_user_filters(chat_id, filters)
-    await update.message.reply_text(f"Job filter has been set to: {filters}")
+    await update.message.reply_text(f"Job filter has been set to: {filters}. Use /search to search for jobs.")
 
 
 # Command: /start
@@ -35,7 +35,6 @@ async def start(update: Update, context) -> None:
 
     Other commands:
     - /menu: Access an interactive menu for job searching options.
-    - /help: See detailed instructions on how to use the bot.
     - /set_time <HH:MM>: Set the daily notification time (24-hour format, e.g., 08:00).
 
     You will receive daily job notifications at the set time based on your filter.
@@ -43,30 +42,12 @@ async def start(update: Update, context) -> None:
     await update.message.reply_text(start_text)
 
 
-# Command: /help
-async def help_command(update: Update, context) -> None:
-    """Send a help message when the command /help is issued."""
-    help_text = """
-    Remote Entry-Level Job Finder Bot - Help Guide
-
-    How to use:
-    1. Type the job title you are looking for (e.g., "Backend Developer").
-    2. Use /search to search for remote jobs based on your filter.
-
-    Commands:
-    - /menu: Access an interactive menu for job searching options.
-    - /help: See detailed instructions on how to use the bot.
-    - /set_time <HH:MM>: Set the daily notification time (24-hour format, e.g., 08:00).
-
-    You will receive daily job notifications at the set time based on your filter.
-    """
-    await update.message.reply_text(help_text)
-
-
 # Command: /set_time (Set the notification time)
 async def set_time(update: Update, context) -> None:
     """Set the time for daily notifications."""
     chat_id = update.message.chat_id
+    logger.info(f"User {chat_id} triggered /set_time with args: {context.args}")
+
     if len(context.args) != 1:
         await update.message.reply_text("Please use the format: /set_time <HH:MM> (e.g., /set_time 09:00).")
         return
@@ -75,13 +56,13 @@ async def set_time(update: Update, context) -> None:
 
     try:
         # Validate and parse the time
-        datetime.strptime(time_str, "%H:%M")
-        adjust_schedule_time(time_str)
+        adjust_schedule_time(time_str)  # Ensure this function is called
         await update.message.reply_text(
             f"Notification time has been set to {time_str}. You will receive daily notifications at this time.")
         logger.info(f"User {chat_id} set notification time to {time_str}")
-    except ValueError:
+    except ValueError as e:
         await update.message.reply_text("Invalid time format. Please use HH:MM (e.g., 09:00).")
+        logger.error(f"Invalid time format by user {chat_id}: {time_str}. Error: {e}")
 
 
 # Function to display an inline menu
@@ -89,7 +70,6 @@ async def show_menu(update: Update, context) -> None:
     """Show an interactive menu with options."""
     keyboard = [
         [InlineKeyboardButton("Search Jobs", callback_data='search_jobs')],
-        [InlineKeyboardButton("Help", callback_data='help')],
         [InlineKeyboardButton("Set Notification Time", callback_data='set_time')]
     ]
 
@@ -105,8 +85,6 @@ async def button_handler(update: Update, context) -> None:
 
     if query.data == 'search_jobs':
         await query.edit_message_text(text="Searching for jobs... Use /search command.")
-    elif query.data == 'help':
-        await help_command(update, context)
     elif query.data == 'set_time':
         await query.edit_message_text(text="To set the notification time, use the /set_time <HH:MM> command.")
 
