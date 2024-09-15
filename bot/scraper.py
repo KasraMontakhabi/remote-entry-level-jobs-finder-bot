@@ -1,5 +1,7 @@
 # bot/scraper.py
 import logging
+import os
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -43,7 +45,7 @@ def get_jobs_from_jobs_api(filters):
     url = f"https://jobs-api14.p.rapidapi.com/list"
 
     headers = {
-        "x-rapidapi-key": "your-rapidapi-key-here",  # Load from environment variable
+        "x-rapidapi-key": os.environ.get("RAPID_API_KEY"),  # Load from environment variable
         "x-rapidapi-host": "jobs-api14.p.rapidapi.com",
         "Content-Type": "application/json"
     }
@@ -71,4 +73,4 @@ def get_jobs_from_jobs_api(filters):
         jobs.append(job_details)
 
     logger.info(f"Returning {len(jobs)} jobs from API")
-    return jobs
+    return jobs[:5]
